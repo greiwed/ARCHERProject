@@ -1,0 +1,259 @@
+#include "main.h"
+#include "Classification_Algorithm.h"
+#include "arm_math.h"
+
+#define POWER_DIV 190
+
+// Heap Memory
+static int16_t tempTimeData[SMALL_BUFF_SIZE / 4];
+static int16_t tempFreqData[SMALL_BUFF_SIZE / 8];
+static uint8_t freqStep = 250;
+static uint8_t freqLength = 21;
+static uint8_t powerStep = 200;
+static uint8_t powerLength = 51;
+static volatile float32_t sigma = 0.3;
+static volatile float32_t vote = 3;
+
+static uint16_t classificationTable[] =
+
+{
+			2264,2282,2314,2369,2463,2616,2859,3231,3781,4568,5655,7102,8958,11249,13964,17047,20388,23824,27152,30141,32565,34225,34977,34755,33579,31551,28844,25672,22268,18852,15611,12684,10157,8064,6398,5122,4179,3506,3043,2735,2537,2414,2340,2297,2273,2259,2252,2249,2247,2246,2246,
+			4607,4625,4657,4712,4806,4959,5202,5574,6124,6911,7998,9445,11301,13592,16307,19390,22731,26167,29495,32484,34908,36568,37320,37098,35922,33894,31187,28015,24611,21195,17954,15027,12500,10407,8741,7465,6522,5849,5386,5078,4881,4757,4683,4640,4616,4602,4595,4592,4590,4589,4589,
+			8414,8431,8463,8518,8612,8765,9008,9380,9931,10718,11805,13251,15108,17398,20114,23197,26537,29973,33301,36291,38715,40374,41126,40904,39728,37701,34993,31822,28417,25001,21761,18834,16307,14214,12548,11271,10328,9656,9193,8885,8687,8564,8490,8446,8422,8409,8402,8398,8396,8396,8395,
+			13770,13788,13819,13875,13968,14122,14365,14736,15287,16074,17161,18608,20464,22755,25470,28553,31893,35330,38657,41647,44071,45730,46482,46260,45084,43057,40350,37178,33774,30358,27117,24190,21663,19570,17904,16627,15684,15012,14549,14241,14043,13920,13846,13803,13778,13765,13758,13754,13753,13752,13751,
+			20186,20204,20235,20291,20384,20538,20780,21152,21703,22490,23577,25024,26880,29171,31886,34969,38309,41746,45073,48063,50487,52146,52898,52676,51500,49473,46765,43594,40189,36773,33533,30606,28079,25986,24320,23043,22100,21428,20965,20657,20459,20336,20262,20219,20194,20181,20174,20170,20169,20168,20167,
+			26499,26517,26548,26604,26698,26851,27094,27466,28016,28803,29890,31337,33193,35484,38199,41282,44623,48059,51386,54376,56800,58460,59211,58989,57813,55786,53079,49907,46503,43087,39846,36919,34392,32299,30633,29357,28413,27741,27278,26970,26772,26649,26575,26532,26508,26494,26487,26484,26482,26481,26481,
+			31149,31167,31198,31254,31347,31501,31744,32115,32666,33453,34540,35987,37843,40134,42849,45932,49273,52709,56036,59026,61450,63109,63861,63639,62463,60436,57729,54557,51153,47737,44496,41569,39042,36949,35283,34006,33063,32391,31928,31620,31422,31299,31225,31182,31157,31144,31137,31133,31132,31131,31130,
+			32785,32802,32834,32889,32983,33136,33379,33751,34301,35089,36175,37622,39478,41769,44485,47567,50908,54344,57672,60662,63086,64745,65497,65275,64099,62071,59364,56192,52788,49372,46131,43204,40677,38584,36919,35642,34699,34026,33563,33256,33058,32934,32860,32817,32793,32780,32772,32769,32767,32766,32766,
+			30896,30913,30945,31000,31094,31247,31490,31862,32413,33200,34286,35733,37589,39880,42596,45679,49019,52455,55783,58773,61197,62856,63608,63386,62210,60183,57475,54303,50899,47483,44242,41316,38789,36696,35030,33753,32810,32138,31675,31367,31169,31046,30972,30928,30904,30891,30884,30880,30878,30877,30877,
+			26070,26087,26119,26175,26268,26422,26664,27036,27587,28374,29461,30908,32764,35055,37770,40853,44193,47630,50957,53947,56371,58030,58782,58560,57384,55357,52649,49478,46073,42657,39417,36490,33963,31870,30204,28927,27984,27312,26849,26541,26343,26220,26146,26103,26078,26065,26058,26054,26053,26052,26051,
+			19698,19715,19747,19802,19896,20049,20292,20664,21214,22002,23088,24535,26391,28682,31398,34480,37821,41257,44585,47575,49999,51658,52410,52188,51012,48984,46277,43105,39701,36285,33044,30117,27590,25497,23832,22555,21612,20939,20476,20169,19971,19847,19773,19730,19706,19693,19686,19682,19680,19679,19679,
+			13328,13345,13377,13432,13526,13679,13922,14294,14845,15632,16719,18165,20022,22313,25028,28111,31451,34888,38215,41205,43629,45288,46040,45818,44642,42615,39907,36736,33331,29915,26675,23748,21221,19128,17462,16185,15242,14570,14107,13799,13601,13478,13404,13360,13336,13323,13316,13312,13310,13310,13309,
+			8078,8095,8127,8182,8276,8429,8672,9044,9595,10382,11468,12915,14771,17062,19778,22861,26201,29637,32965,35955,38379,40038,40790,40568,39392,37365,34657,31485,28081,24665,21424,18498,15970,13878,12212,10935,9992,9320,8857,8549,8351,8228,8154,8110,8086,8073,8066,8062,8060,8059,8059,
+			4388,4405,4437,4492,4586,4739,4982,5354,5905,6692,7779,9225,11082,13373,16088,19171,22511,25948,29275,32265,34689,36348,37100,36878,35702,33675,30967,27796,24391,20975,17735,14808,12281,10188,8522,7245,6302,5630,5167,4859,4661,4538,4464,4420,4396,4383,4376,4372,4370,4370,4369,
+			2140,2157,2189,2244,2338,2491,2734,3106,3656,4444,5530,6977,8833,11124,13840,16922,20263,23699,27027,30017,32441,34100,34852,34630,33454,31426,28719,25547,22143,18727,15486,12559,10032,7939,6274,4997,4054,3381,2919,2611,2413,2289,2215,2172,2148,2135,2128,2124,2122,2121,2121,
+			941,958,990,1045,1139,1292,1535,1907,2457,3245,4331,5778,7634,9925,12641,15723,19064,22500,25828,28818,31242,32901,33653,33431,32255,30227,27520,24348,20944,17528,14287,11360,8833,6740,5075,3798,2855,2182,1719,1412,1214,1090,1016,973,949,936,928,925,923,922,922,
+			378,395,427,482,576,729,972,1344,1894,2682,3768,5215,7071,9362,12078,15160,18501,21937,25265,28255,30679,32338,33090,32868,31692,29664,26957,23785,20381,16965,13724,10797,8270,6177,4512,3235,2292,1619,1157,849,651,527,453,410,386,373,366,362,360,359,359,
+			144,161,193,249,342,496,738,1110,1661,2448,3535,4981,6838,9129,11844,14927,18267,21704,25031,28021,30445,32104,32856,32634,31458,29431,26723,23552,20147,16731,13491,10564,8037,5944,4278,3001,2058,1386,923,615,417,294,220,177,152,139,132,128,126,126,125,
+			58,76,107,163,256,410,652,1024,1575,2362,3449,4896,6752,9043,11758,14841,18181,21618,24945,27935,30359,32018,32770,32548,31372,29345,26637,23466,20061,16645,13405,10478,7951,5858,4192,2915,1972,1300,837,529,331,208,134,91,66,53,46,42,41,40,39,
+			30,47,79,134,228,381,624,996,1547,2334,3421,4867,6724,9015,11730,14813,18153,21590,24917,27907,30331,31990,32742,32520,31344,29317,26609,23438,20033,16617,13377,10450,7923,5830,4164,2887,1944,1272,809,501,303,180,106,63,38,25,18,14,12,12,11,
+			22,39,71,126,220,373,616,988,1539,2326,3412,4859,6715,9006,11722,14805,18145,21581,24909,27899,30323,31982,32734,32512,31336,29309,26601,23429,20025,16609,13368,10442,7914,5822,4156,2879,1936,1264,801,493,295,172,98,54,30,17,10,6,4,3,3
+};
+
+
+void classification_Algorithm(uint8_t* decision){
+	
+	// Define Local Variables
+	int16_t* readBuffAddr;
+
+	int32_t i;
+	int32_t j;
+	arm_rfft_instance_q15 fft;
+	volatile q15_t mic1FreqVal;
+	volatile uint32_t mic1FreqIdx;
+	volatile uint32_t mic1Freq;
+	volatile int64_t mic1Power;
+	q15_t mic2FreqVal;
+	uint32_t mic2FreqIdx;
+	volatile uint32_t mic2Freq;
+	volatile int64_t mic2Power;
+	q15_t mic3FreqVal;
+	uint32_t mic3FreqIdx;
+	volatile uint32_t mic3Freq;
+	volatile int64_t mic3Power;
+	q15_t mic4FreqVal;
+	uint32_t mic4FreqIdx;
+	uint32_t mic4Freq;
+	volatile int64_t mic4Power;
+	volatile int64_t rowNum;
+	volatile int64_t colNum;
+	uint32_t classTableIdx;
+	volatile float32_t mic1Prob;
+	volatile float32_t mic2Prob;
+	volatile float32_t mic3Prob;
+	volatile float32_t mic4Prob;
+	float32_t voteVal;
+
+	// Locate Current Buffer to Read From
+	if(LL_DMA_CURRENTTARGETMEM0 == LL_DMA_GetCurrentTargetMem(DMA2,LL_DMA_STREAM_0)){
+		readBuffAddr = (int16_t*) LL_DMA_GetMemory1Address(DMA2,LL_DMA_STREAM_0);
+	}else if(LL_DMA_CURRENTTARGETMEM1 == LL_DMA_GetCurrentTargetMem(DMA2,LL_DMA_STREAM_0)){
+		readBuffAddr = (int16_t*) LL_DMA_GetMemoryAddress(DMA2,LL_DMA_STREAM_0);
+	}else{
+		*decision = 0;
+		return;
+	}
+
+	// Mic 1 Characteristics
+	j = 0;
+	for(i = 0; i < SMALL_BUFF_SIZE;i+=4){
+		tempTimeData[j] = readBuffAddr[i];
+		j++;
+	}
+
+	arm_status r = arm_rfft_init_q15(&fft, (SMALL_BUFF_SIZE/4), 0, 1);
+	if(r == ARM_MATH_SUCCESS){
+
+		// Calculate Mic 1 Peak Frequency
+		arm_rfft_q15(&fft, tempTimeData, tempFreqData);
+		arm_abs_q15(tempFreqData, tempFreqData, (SMALL_BUFF_SIZE/8));
+		arm_max_q15(&tempFreqData[1], (SMALL_BUFF_SIZE / 8)-1, &mic1FreqVal, &mic1FreqIdx);
+		mic1Freq = (mic1FreqIdx + 1) * (SAMP_FREQ / 2) / (SMALL_BUFF_SIZE / 8);
+
+		// Normalize Signal
+		if(mic1FreqVal != 0){
+			for(i=0;i<(SMALL_BUFF_SIZE/8);i++){
+				tempFreqData[i] = tempFreqData[i] * 100 / mic1FreqVal;
+			}
+		}
+
+		// Calculate Normalized Mic 1 Power 500-2500Hz
+		arm_power_q15(&tempFreqData[10], 500, &mic1Power);
+		mic1Power = mic1Power / POWER_DIV;
+	}
+
+	// Mic 2 Characteristics
+	j = 0;
+	for(i = 0; i < SMALL_BUFF_SIZE;i+=4){
+		tempTimeData[j] = readBuffAddr[i+1];
+		j++;
+	}
+
+	if(r == ARM_MATH_SUCCESS){
+
+		// Calculate Mic 2 Peak Frequency
+		arm_rfft_q15(&fft, tempTimeData, tempFreqData);
+		arm_abs_q15(tempFreqData, tempFreqData, (SMALL_BUFF_SIZE/8));
+		arm_max_q15(&tempFreqData[1], (SMALL_BUFF_SIZE / 8)-1, &mic2FreqVal, &mic2FreqIdx);
+		mic2Freq = (mic2FreqIdx + 1) * (SAMP_FREQ / 2) / (SMALL_BUFF_SIZE / 8);
+
+		// Normalize Signal
+		if(mic2FreqVal != 0){
+			for(i=0;i<(SMALL_BUFF_SIZE/8);i++){
+				tempFreqData[i] = tempFreqData[i] * 100 / mic2FreqVal;
+			}
+		}
+
+		// Calculate Normalized Mic 2 Power 500-2500Hz
+		arm_power_q15(&tempFreqData[10], 500, &mic2Power);
+		mic2Power = mic2Power / POWER_DIV;
+	}
+
+	// Mic 3 Characteristics
+	j = 0;
+	for(i = 0; i < SMALL_BUFF_SIZE;i+=4){
+		tempTimeData[j] = readBuffAddr[i+2];
+		j++;
+	}
+
+	if(r == ARM_MATH_SUCCESS){
+
+		// Calculate Mic 3 Peak Frequency
+		arm_rfft_q15(&fft, tempTimeData, tempFreqData);
+		arm_abs_q15(tempFreqData, tempFreqData, (SMALL_BUFF_SIZE/8));
+		arm_max_q15(&tempFreqData[1], (SMALL_BUFF_SIZE / 8)-1, &mic3FreqVal, &mic3FreqIdx);
+		mic3Freq = (mic3FreqIdx + 1) * (SAMP_FREQ / 2) / (SMALL_BUFF_SIZE / 8);
+
+		// Normalize Signal
+		if(mic3FreqVal != 0){
+			for(i=0;i<(SMALL_BUFF_SIZE/8);i++){
+				tempFreqData[i] = tempFreqData[i] * 100 / mic3FreqVal;
+			}
+		}
+
+		// Calculate Normalized Mic 3 Power 500-2500Hz
+		arm_power_q15(&tempFreqData[10], 500, &mic3Power);
+		mic3Power = mic3Power / POWER_DIV;
+	}
+
+	// Mic 4 Characteristics
+	j = 0;
+	for(i = 0; i < SMALL_BUFF_SIZE;i+=4){
+		tempTimeData[j] = readBuffAddr[i+3];
+		j++;
+	}
+
+	if(r == ARM_MATH_SUCCESS){
+
+		// Calculate Mic 4 Peak Frequency
+		arm_rfft_q15(&fft, tempTimeData, tempFreqData);
+		arm_abs_q15(tempFreqData, tempFreqData, (SMALL_BUFF_SIZE/8));
+		arm_max_q15(&tempFreqData[1], (SMALL_BUFF_SIZE / 8)-1, &mic4FreqVal, &mic4FreqIdx);
+		mic4Freq = (mic4FreqIdx + 1) * (SAMP_FREQ / 2) / (SMALL_BUFF_SIZE / 8);
+
+		// Normalize Signal
+		if(mic4FreqVal != 0){
+			for(i=0;i<(SMALL_BUFF_SIZE/8);i++){
+				tempFreqData[i] = tempFreqData[i] * 100 / mic4FreqVal;
+			}
+		}
+
+		// Calculate Normalized Mic 4 Power 500-2500Hz
+		arm_power_q15(&tempFreqData[10], 500, &mic4Power);
+		mic4Power = mic4Power / POWER_DIV;
+	}
+
+	// Calculate Probabilities
+
+	if(r == ARM_MATH_SUCCESS){
+		// Mic 1 Prob
+		rowNum = mic1Freq / freqStep;
+		colNum = mic1Power / powerStep;
+		if(rowNum > freqLength){
+			rowNum = freqLength - 1;
+		}
+		if(colNum > powerLength){
+			colNum = powerLength - 1;
+		}
+		classTableIdx = (rowNum * 51) + colNum;
+		mic1Prob = (float32_t) classificationTable[classTableIdx] / (float32_t) 65536;
+
+		// Mic 2 Prob
+		rowNum = mic2Freq / freqStep;
+		colNum = mic2Power / powerStep;
+		if(rowNum > freqLength){
+			rowNum = freqLength - 1;
+		}
+		if(colNum > powerLength){
+			colNum = powerLength - 1;
+		}
+		classTableIdx = (rowNum * 51) + colNum;
+		mic2Prob = (float32_t) classificationTable[classTableIdx]  / (float32_t) 65536;
+
+		// Mic 3 Prob
+		rowNum = mic3Freq / freqStep;
+		colNum = mic3Power / powerStep;
+		if(rowNum > freqLength){
+			rowNum = freqLength - 1;
+		}
+		if(colNum > powerLength){
+			colNum = powerLength - 1;
+		}
+		classTableIdx = (rowNum * 51) + colNum;
+		mic3Prob = (float32_t) classificationTable[classTableIdx] / (float32_t) 65536;
+
+		// Mic 4 Prob
+		//mic4Power = mic4Power / POWER_DIV;
+		rowNum = mic4Freq / freqStep;
+		colNum = mic4Power / powerStep;
+		if(rowNum > freqLength){
+			rowNum = freqLength - 1;
+		}
+		if(colNum > powerLength){
+			colNum = powerLength - 1;
+		}
+		classTableIdx = (rowNum * 51) + colNum;
+		mic4Prob = (float32_t) classificationTable[classTableIdx] / (float32_t) 65536;
+
+		voteVal = (mic1Prob + mic2Prob + mic3Prob + mic4Prob) / sigma;
+
+		if(voteVal > vote){
+			*decision = 1;
+		}else{
+			*decision = 0;
+		}
+	}else{
+		*decision = 0;
+	}
+
+}

@@ -1,0 +1,10 @@
+stm32f4xx_ll_adc.c:290:13:LL_ADC_CommonDeInit	0	static
+stm32f4xx_ll_adc.c:320:13:LL_ADC_CommonInit	4	static
+stm32f4xx_ll_adc.c:402:6:LL_ADC_CommonStructInit	0	static
+stm32f4xx_ll_adc.c:427:13:LL_ADC_DeInit	0	static
+stm32f4xx_ll_adc.c:581:13:LL_ADC_Init	4	static
+stm32f4xx_ll_adc.c:629:6:LL_ADC_StructInit	0	static
+stm32f4xx_ll_adc.c:676:13:LL_ADC_REG_Init	0	static
+stm32f4xx_ll_adc.c:762:6:LL_ADC_REG_StructInit	0	static
+stm32f4xx_ll_adc.c:808:13:LL_ADC_INJ_Init	0	static
+stm32f4xx_ll_adc.c:886:6:LL_ADC_INJ_StructInit	0	static

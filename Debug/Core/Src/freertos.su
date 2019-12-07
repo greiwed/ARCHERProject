@@ -1,0 +1,5 @@
+freertos.c:167:6:StartDefaultTask	8	static
+freertos.c:185:6:DSPTask	16	static
+freertos.c:224:6:DisplayTask	64	static
+freertos.c:83:6:MX_FREERTOS_Init	168	static
+freertos.c:285:6:DMA_Semaphore_Release	8	static
